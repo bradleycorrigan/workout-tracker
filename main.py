@@ -81,26 +81,24 @@ if check_password():
 
     st.subheader("Workout History (Grouped by Date)")
 
-    # iterate through dictionary keys (dates)
-    # sort so newest date is always at the top
-
-    for date_key in sorted(grouped_workouts.keys(), reverse=True):
-
-        # create a visual container for each date 
+    for date_key, logs in grouped_workouts.items():
+        #  the master card is the session 
         with st.expander(f"**📆 {date_key}**", expanded=True):
-            # define headers inside the expander
-            h1, h2, h3 , h4, h5 = st.columns(5)
-            h1.write("Workout")
-            h2.write("Weight")
-            h3.write("Reps")
-            h4.write("Sets")
-            st.divider()
 
-            # nested loop iterate through the list of workouts 
-            for workout in grouped_workouts[date_key]:
-                col1, col2, col3, col4 = st.columns(4)
-                col1.write(workout['workout_type'])
-                col2.write(workout['weight'])
-                col3.write(workout['reps'])
-                col4.write(workout['sets'])
+            for log in logs:
+                # an exercise card for each workout
+                with st.container():
+                    # two columns, one for the name, and one for the stats 
+                    col_name, col_stats = st.columns([2, 1])
 
+                    with col_name:
+                        st.markdown(f"**{log['workout_type']}**")
+                        # use a caption for a sub label
+                        st.caption("Main Movement")
+                    
+                    with col_stats: 
+                        # right align the stats
+                        st.markdown(f"**{log['weight']}kg**")
+                        st.write(f"{log['sets']} sets x {log['reps']} reps")
+                #  divider between exercises
+                st.divider()
