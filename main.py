@@ -41,6 +41,38 @@ if check_password():
         return [item['name'] for item in data.data]
     exercise_options = get_exercise_types()
 
+    # delete a workout
+    @st.dialog("Do you really want to delete this?")
+    def delete_workout(workout_id):
+        st.write("This action cannot be undone.")
+        if st.button("Yeah, delete it", type="primary"):
+            supabase.table("workouts").delete().eq("id", workout_id).execute()
+            st.success("Workout deleted successfully!")
+            st.rerun() # refresh the page to show the updated list
+    
+    # edit a workout
+    @st.dialog("Edit Workout")
+    def edit_workout(log, exercise_options):
+        # index finds the current exercise name in the options list, so it can be pre-selected in the dropdown
+        current_idx = exercise_options.index(log['workout_type'])
+
+        new_name = st.selectbox("Workout Name", options=exercise_options, index=current_idx)
+        new_weight = st.number_input("Weight", value=float(log['weight']))
+        new_reps = st.number_input("Reps", value=int(log['reps']), step=1)
+        new_sets = st.number_input("Sets", value=int(log['sets']), step=1)
+
+        if st.button("Save Changes"):
+            update_data = {
+                "workout_type": new_name,
+                "weight": new_weight,
+                "reps": new_reps,
+                "sets": new_sets
+            }
+            # update the workout in the database
+            supabase.table("workouts").update(update_data).eq("id", log['id']).execute()
+            st.success("Workout updated successfully!")
+            st.rerun() # refresh the page to show the updated workout
+
     # create the ui container 
     with st.form ("entry_form"):
         # define the form fields and assign them to variables
@@ -81,7 +113,7 @@ if check_password():
 
     st.subheader("Workout History (Grouped by Date)")
 
-    for date_key, logs in grouped_workouts.items():
+    for date_key, logs in sorted(grouped_workouts.items(), reverse=True):
         #  the master card is the session 
         with st.expander(f"**📆 {date_key}**", expanded=True):
 
@@ -89,7 +121,7 @@ if check_password():
                 # an exercise card for each workout
                 with st.container():
                     # two columns, one for the name, and one for the stats 
-                    col_name, col_stats = st.columns([2, 1])
+                    col_name, col_stats, col_menu = st.columns([2, 1, 0.5])
 
                     with col_name:
                         st.markdown(f"**{log['workout_type']}**")
@@ -100,5 +132,16 @@ if check_password():
                         # right align the stats
                         st.markdown(f"**{log['weight']}kg**")
                         st.write(f"{log['sets']} sets x {log['reps']} reps")
+
+                    with col_menu: 
+                        # hamburger menu
+                        with st.popover("✏️"):
+                            # edit option
+                            if st.button("✏️ Edit", key = f"edit_{log['id']}"):
+                                edit_workout(log, exercise_options)
+                            # delete option
+                            if st.button("🗑️ Delete", key = f"del_{log['id']}"):
+                                delete_workout(log['id'])
+
                 #  divider between exercises
                 st.divider()
